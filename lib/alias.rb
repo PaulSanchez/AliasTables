@@ -43,7 +43,7 @@ class AliasTable
         (p_value[i] < equiprob ? deficit_set : surplus_set) << i
       end
     end
-    until deficit_set.empty? do
+    until deficit_set.empty? or surplus_set.empty? do
       deficit = deficit_set.pop
       surplus = surplus_set.pop
       @p_primary[deficit] = p_value[deficit] / equiprob
