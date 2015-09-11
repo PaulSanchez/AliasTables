@@ -26,9 +26,7 @@ class AliasTable
   #   - RuntimeError if +p_value+s don't sum to one. Rationals will avoid this.
   #
   def initialize(x_set, p_value)
-    if x_set.length != p_value.length
-      fail 'Args to AliasTable must be vectors of the same length.'
-    end
+    fail 'x_set & p_value must have same length.' if x_set.size != p_value.size
     fail 'p_values must be positive' unless p_value.all? { |value| value > 0 }
     @p_primary = p_value.map(&:to_r)
     fail 'p_values must sum to 1' unless @p_primary.reduce(:+) == Rational(1)
