@@ -12,55 +12,49 @@ class AliasTable
   # Construct an alias table from a set of values and their associated
   # probabilities.  Values and their probabilities must be synchronized,
   # i.e., they must be arrays of the same length.  Values can be
-  # anything, but the probabilities must be positive numbers that
-  # sum to one.
+  # anything, but the probabilities must be positive Rational numbers
+  # that sum to one.
   #
   # *Arguments*::
-  #   - +x_set+ -> the set of values to generate from.
+  #   - +x_set+ -> the set of values from which to generate.
   #   - +p_value+ -> the synchronized set of probabilities associated
   #     with the value set. These values should be Rationals to avoid
   #     rounding errors.
   # *Raises*::
   #   - RuntimeError if +x_set+ and +p_value+s are different lengths.
-  #   - RuntimeError if any +p_value+ are negative.
-  #   - RuntimeError if +p_value+ don't sum to one. Use Rationals to avoid this.
+  #   - RuntimeError if any +p_value+ is negative.
+  #   - RuntimeError if +p_value+s don't sum to one. Rationals will avoid this.
   #
-  def initialize(x_values, p_values)
-    if x_values.length != p_values.length
-      raise "Args to AliasTable must be vectors of the same length."
+  def initialize(x_set, p_value)
+    if x_set.length != p_value.length
+      fail 'Args to AliasTable must be vectors of the same length.'
     end
-    p_val = p_values.map do |current_p|
-      tmp = current_p.to_r
-      raise "p_values must be positive" if tmp <= 0.0
-      tmp
-    end
-    unless p_val.reduce(:+) == Rational(1)
-      raise "p_values must sum to 1.0"
-    end
-    @x = x_values.clone.freeze
+    fail 'p_values must be positive' unless p_value.all? { |value| value > 0 }
+    @p_primary = p_value.map(&:to_r)
+    fail 'p_values must sum to 1' unless @p_primary.reduce(:+) == Rational(1)
+    @x = x_set.clone.freeze
     @alias = Array.new(@x.length)
-    @p_primary = Array.new(@x.length).map{Rational(1)}
-    equiprob = Rational(1, @x.length)
-    deficit_set = []
-    surplus_set = []
-    @x.each_index do |i|
-      unless p_val[i] == equiprob
-        (p_val[i] < equiprob ? deficit_set : surplus_set) << i
-      end
-    end
-    until deficit_set.empty? do
+    parity = Rational(1, @x.length)
+    group = @p_primary.each_index.group_by { |i| @p_primary[i] <=> parity }
+    parity_set = group.fetch(0, [])
+    parity_set.each { |i| @p_primary[i] = Rational(1) }
+    deficit_set = group.fetch(-1, [])
+    surplus_set = group.fetch(1, [])
+    until deficit_set.empty?
       deficit = deficit_set.pop
       surplus = surplus_set.pop
-      @p_primary[deficit] = p_val[deficit] / equiprob
+      @p_primary[surplus] -= parity - @p_primary[deficit]
+      @p_primary[deficit] /= parity
       @alias[deficit] = @x[surplus]
-      p_val[surplus] -= equiprob - p_val[deficit]
-      unless p_val[surplus] == equiprob
-        (p_val[surplus] < equiprob ? deficit_set : surplus_set) << surplus
+      if @p_primary[surplus] == parity
+        @p_primary[surplus] = Rational(1)
+      else
+        (@p_primary[surplus] < parity ? deficit_set : surplus_set) << surplus
       end
     end
   end
 
-  # Returns a random outcome from this object's distribution.
+  # Return a random outcome from this object's distribution.
   # The generate method is O(1) time, but is not an inversion
   # since two uniforms are used for each value that gets generated.
   #
@@ -68,5 +62,4 @@ class AliasTable
     column = rand(@x.length)
     rand <= @p_primary[column] ? @x[column] : @alias[column]
   end
-
 end
