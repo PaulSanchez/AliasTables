@@ -30,7 +30,7 @@ class AliasTable
       raise "Args to AliasTable must be vectors of the same length."
     end
     p_val = p_values.map do |current_p|
-      tmp = current_p.to_r
+      tmp = current_p.rationalize
       raise "p_values must be positive" if tmp <= 0.0
       tmp
     end
