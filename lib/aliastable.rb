@@ -28,7 +28,7 @@ class AliasTable
   def initialize(x_set, p_value)
     fail 'x_set & p_value must have same length.' if x_set.size != p_value.size
     fail 'p_values must be positive' unless p_value.all? { |value| value > 0 }
-    @p_primary = p_value.map(&:to_r)
+    @p_primary = p_value.map(&:rationalize)
     fail 'p_values must sum to 1' unless @p_primary.reduce(:+) == Rational(1)
     @x = x_set.clone.freeze
     @alias = Array.new(@x.length)
